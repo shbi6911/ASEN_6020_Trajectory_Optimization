@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.optimize import brentq
 import matplotlib.pyplot as plt
 
 def prob2():
@@ -102,7 +103,7 @@ def prob4():
 
     di_total = np.pi/2
     r_list = [2, 5, 7, 9, 10, 100]
-    N = 300
+    N = 500
     j_total = lambda r, di1, di3: j(r, di1, di_total - di1 - di3, di3)
 
     def plot_di(DI1, DI3, Z, r):
@@ -132,13 +133,132 @@ def prob4():
         i, k = np.unravel_index(np.nanargmin(Z), Z.shape)
         print(f"min J_total @ r={r} = {Z[i,k]:.5f} at di1 = {DI1[i,k]:.2f} deg, di3 = {DI3[i,k]:.2f} deg")
 
+def prob5_test():
 
+    def T_of_l(l):
+        return np.sqrt(2.0 * l / (1.0 + l))
 
+    def J1_of(eta, l, di):
+        T = T_of_l(l)
+        return np.sqrt((T - 1.0) ** 2 + 4.0 * T * np.sin(eta * di / 2.0) ** 2)
 
+    def J2_of(eta, l, di):
+        T = T_of_l(l)
+        return 2.0 * (T / l) * np.sin((1.0 - eta) * di / 2.0)
 
+    def J_of(eta, l, di):
+        return J1_of(eta, l, di) + J2_of(eta, l, di)
 
+    def dJdeta(eta, l, di):
+        T = T_of_l(l)
+        J1 = J1_of(eta, l, di)
+        return T * di * np.sin(eta * di) / J1 - (T / l) * di * np.cos((1.0 - eta) * di / 2.0)
+
+    def eta_plot_test(l, di):
+
+        eta_array = np.linspace(0,1,1000)
+        F_array = np.array([dJdeta(eta, l, di) for eta in eta_array])
+        J_array = np.array([J_of(eta, l, di) for eta in eta_array])
+
+        fig, ax = plt.subplots(figsize=(7.5, 5.5))
+        ax.set_xlabel(r"$\eta$")
+        ax.set_ylabel(r"J or F = $\partial J / \partial \eta$")
+        ax.set_title(rf"Cost J and $\partial J / \partial \eta$ vs. "
+                    rf"$\eta$ Parameter for l = {l}, $\Delta i$ = {np.rad2deg(di):.0f} deg")
+        ax.plot(eta_array, F_array, color='blue', label = r"$\partial J / \partial \eta$")
+        ax.plot(eta_array, J_array, color='green', label = "Cost J")
+        ax.axhline(y=0, color='red', linestyle='dotted')
+        ax.legend()
+
+        try:
+            print(f"first root: {brentq(dJdeta, 0.0, 0.5, args=(l, di))}")
+        except:
+            print(f"no first root")
+        try:
+            print(f"second root: {brentq(dJdeta, 0.5, 1.0, args=(l, di))}")
+        except:
+            print(f"no second root")
+        return fig
+
+    fig1 = eta_plot_test(1.4, np.pi/2)
+    fig2 = eta_plot_test(5, np.pi/2)
+    fig3 = eta_plot_test(1.4468, np.deg2rad(5))
+
+    fig1.show()
+    fig2.show()
+    fig3.show()
+
+def prob5():
+
+    def T_of_l(l):
+        return np.sqrt(2.0 * l / (1.0 + l))
+
+    def J1_of(eta, l, di):
+        T = T_of_l(l)
+        return np.sqrt((T - 1.0) ** 2 + 4.0 * T * np.sin(eta * di / 2.0) ** 2)
+
+    def J2_of(eta, l, di):
+        T = T_of_l(l)
+        return 2.0 * (T / l) * np.sin((1.0 - eta) * di / 2.0)
+
+    def J_of(eta, l, di):
+        return J1_of(eta, l, di) + J2_of(eta, l, di)
+
+    def dJdeta(eta, l, di):
+        T = T_of_l(l)
+        J1 = J1_of(eta, l, di)
+        return T * di * np.sin(eta * di) / J1 - (T / l) * di * np.cos((1.0 - eta) * di / 2.0)
+
+    def eta_star(l, di):
+
+        f0 = dJdeta(0.0, l, di)
+        f1 = dJdeta(1.0, l, di)
+        # check if one endpoint is negative
+        if f0 * f1 < 0.0:
+            return brentq(dJdeta, 0.0, 1.0, args=(l, di))
+
+        # otherwise do a grid search and pick the root going negative -> positive
+        grid = np.linspace(0.0, 1.0, 10)
+        vals = dJdeta(grid, l, di)
+        sign_changes = np.where(np.diff(np.sign(vals)) != 0)[0]
+        # check for the case with no root on the interval
+        if len(sign_changes) == 0:
+            return 1.0 if f0 < 0.0 else 0.0
+        
+        min_idx = sign_changes[vals[sign_changes] < 0]
+        a, b = grid[min_idx], grid[min_idx + 1]
+        return brentq(dJdeta, a, b, args=(l, di))
+
+    L_MIN = 1.05    # there's a singularity at l = 1, eta = 0
+    L_MAX = 100.0
+    N_L = 200
+    DI_DEG = np.linspace(5.0, 90.0, 18)
+
+    l_vals = np.logspace(np.log10(L_MIN), np.log10(L_MAX), N_L)
+
+    fig, ax = plt.subplots(figsize=(7.5, 5.5))
+    cmap = plt.get_cmap("viridis")
+
+    for k, di_deg in enumerate(DI_DEG):
+        di = np.deg2rad(di_deg)
+        etas = np.empty_like(l_vals)
+        for i, l in enumerate(l_vals):
+            etas[i] = eta_star(l, di)
+        color = cmap(k / (len(DI_DEG) - 1))
+        ax.plot(l_vals, etas, lw=2, color=color, label=rf"$\Delta i = {di_deg:.0f}^\circ$")
+
+    ax.set_xscale("log")
+    ax.set_xlabel(r"$l = r_2 / r_1$")
+    ax.set_ylabel(r"$\eta^*$")
+    ax.set_ylim(0.0, 1.0)
+    ax.set_title("Optimal plane-change split vs. orbit size ratio")
+    ax.grid(True, which="both", alpha=0.25)
+    ax.legend(title=r"$\Delta i$", fontsize=9, title_fontsize=9, ncol=2)
+    fig.tight_layout()
+    fig.show()
 
 if __name__ == "__main__":
     # prob2()
-    prob4()
-    
+    # prob4()
+    # prob5_test()
+    prob5()
