@@ -257,8 +257,132 @@ def prob5():
     fig.tight_layout()
     fig.show()
 
+def prob7():
+
+    def J_burn1(l):
+        return np.abs(np.sqrt((2*l)/(l+1)) - 1)
+
+    def J_esc(l, x):
+        return np.sqrt(2/l + x **2)
+
+    def J_burn2(l, x):
+        return J_esc(l, x) - np.sqrt(2/(l*(1+l)))
+
+    def J(l, x):
+        return J_burn1(l) + J_burn2(l, x)
+
+    def plot_J_contour(L, X, Z):
+        fig, ax = plt.subplots(figsize=(7, 6))
+        cf = ax.contourf(L, X, Z, levels=100, cmap='viridis')
+        fig.colorbar(cf, ax=ax, label=r'total cost $J_{\mathrm{total}}$')
+        cs = ax.contour(L, X, Z, levels=25, colors='white', linewidths=0.6)
+        ax.clabel(cs, inline=True, fontsize=8, fmt='%.3f')
+        ax.vlines(1, ymin=0, ymax=2, color='r', linestyle='--', lw=1.5, label=r'$l = 1$')
+        ax.hlines(np.sqrt(2), xmin=0, xmax=1, color='k', linestyle='--', 
+                  lw=1.5, label=r'$x = \sqrt{2}$')
+        ax.set_xscale('log')
+        ax.set_xlabel(r'$l = \frac{r_2}{r_1}$')
+        ax.set_ylabel(r'$x = V_\infty / \sqrt{\frac{\mu}{r}}$')
+        ax.set_title(rf'Escape Maneuver Optimality')
+        ax.legend(loc='upper right')
+        plt.tight_layout()
+        plt.show()
+
+    def plot_J_circ(x):
+        l = 1
+        Jvec = J(l, x)
+        fig, ax = plt.subplots(figsize=(7, 6))
+        ax.plot(x, Jvec, lw=2, color='k', label=rf"$Circular Cost J$")
+        ax.vlines(np.sqrt(2), ymin=Jvec.min(), ymax=Jvec.max(), color='k', linestyle='--', 
+                          lw=1.5, label=r'$x = \sqrt{2}$')
+        ax.grid(True, color='gray', linestyle='--', linewidth=0.5)
+        ax.set_xlabel(r'$x = V_\infty / \sqrt{\frac{\mu}{r}}$')
+        ax.set_ylabel(r"Cost J @ l = 1")
+        ax.set_title(r"Cost for One-Impulse Escape")
+        plt.tight_layout()
+        plt.show()
+
+    def plot_J_curves(l, x):
+
+        fig, ax = plt.subplots(figsize=(7.5, 5.5))
+        cmap = plt.get_cmap("viridis")
+
+        for k, x_curr in enumerate(x):
+            Jvec = J(l, x_curr)
+            color = cmap(k / (len(x) - 1))
+            ax.plot(l, Jvec, lw=2, color=color, label=rf"$x = {x_curr:.2f}$")
+
+        J_set = J(l, np.sqrt(2))
+        ax.plot(l, J_set, lw=2, color='r', linestyle='--', label=r"$x = \sqrt{2}$", alpha=0.5)
+        
+        ax.set_xscale("log")
+        ax.set_xlabel(r'$l = \frac{r_2}{r_1}$')
+        ax.set_ylabel(r"Cost J")
+        ax.set_title(r"Cost vs. $l=\frac{r_2}{r_1}$ For Various x")
+        ax.grid(True, which="both", alpha=0.25)
+        ax.legend(title=r"$x$", fontsize=9, title_fontsize=9, ncol=2)
+        plt.tight_layout()
+        plt.show()
+
+    def find_argmins(l, x):
+        J_star = np.zeros(len(x))
+        l_star = np.zeros(len(x))
+        for k, x_curr in enumerate(x):
+            Jvec = J(l, x_curr)
+            min_idx = np.argmin(Jvec)
+            J_star[k] = Jvec[min_idx]
+            l_star[k] = l[min_idx]
+        return (J_star, l_star)
+
+    def plot_argmin(l, x):
+        J_star, l_star = find_argmins(l, x)
+        J_c = J(1,x)
+        fig, axes = plt.subplots(1, 2, figsize=(12, 5.5))
+        ax1, ax2 = axes
+        ax1.plot(x, J_star, lw=2, color='b', label=r'$J^*(x) = min_l J(l,x)$')
+        ax1.plot(x, J_c, lw=2, color='r', linestyle='--', label=r'$J(1,x)$', alpha=0.5)
+        ax1.hlines(1, xmin=x.min(), xmax=x.max(), color='k', linestyle='--', 
+                          lw=1.5, label=r'$J = 1$', alpha=0.5)
+        ax1.set_xlabel('x')
+        ax1.set_ylabel(r'$J^*(x) = min_l J(l,x)$')
+        ax1.grid(True, color='gray', linestyle='--', linewidth=0.5)
+        ax1.legend()
+
+        ax2.plot(x, l_star, lw=2, color='b', label=r'$l^*(x) = argmin_l J(l,x)$')
+        ax1.hlines(1, xmin=x.min(), xmax=x.max(), color='k', linestyle='--', 
+                                  lw=1.5, label=r'$l^*= 1$', alpha=0.5)
+        ax2.set_xlabel('x')
+        ax2.set_ylabel(r'$l^*(x) = argmin_l J(l,x)$')
+        ax2.grid(True, color='gray', linestyle='--', linewidth=0.5)
+
+        fig.suptitle("Escape Maneuver Optimality: Cost and Optimal Transfer Geometry")
+        plt.tight_layout()
+        plt.show()
+
+
+
+    N = 1000
+    max_L = 100
+    max_x = 2
+    l = np.logspace(-2, np.log10(max_L), N)
+    x = np.linspace(0, max_x, N)
+    L, X = np.meshgrid(l, x)
+
+    Z = J(L, X)
+    #plot_J_contour(L, X, Z)
+
+    #plot_J_circ(x)
+
+    x_range = np.linspace(0, max_x, 21)
+    plot_J_curves(l, x_range)
+
+    plot_argmin(l,x)
+
+    
+
 if __name__ == "__main__":
     # prob2()
     # prob4()
     # prob5_test()
-    prob5()
+    # prob5()
+    prob7()
