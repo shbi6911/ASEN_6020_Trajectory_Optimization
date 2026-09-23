@@ -302,25 +302,44 @@ def prob7():
         plt.tight_layout()
         plt.show()
 
-    def plot_J_curves(l, x):
+    def plot_J_curves(l, x_range, x, l_range):
 
-        fig, ax = plt.subplots(figsize=(7.5, 5.5))
+        fig, axes = plt.subplots(1, 2, figsize=(12, 5.5))
+        ax1, ax2 = axes
         cmap = plt.get_cmap("viridis")
 
-        for k, x_curr in enumerate(x):
+        for k, x_curr in enumerate(x_range):
             Jvec = J(l, x_curr)
-            color = cmap(k / (len(x) - 1))
-            ax.plot(l, Jvec, lw=2, color=color, label=rf"$x = {x_curr:.2f}$")
+            color = cmap(k / (len(x_range) - 1))
+            ax1.plot(l, Jvec, lw=2, color=color, label=rf"$x = {x_curr:.2f}$")
 
         J_set = J(l, np.sqrt(2))
-        ax.plot(l, J_set, lw=2, color='r', linestyle='--', label=r"$x = \sqrt{2}$", alpha=0.5)
+        ax1.plot(l, J_set, lw=2, color='r', linestyle='--', label=r"$x = \sqrt{2}$", alpha=0.5)
         
-        ax.set_xscale("log")
-        ax.set_xlabel(r'$l = \frac{r_2}{r_1}$')
-        ax.set_ylabel(r"Cost J")
-        ax.set_title(r"Cost vs. $l=\frac{r_2}{r_1}$ For Various x")
-        ax.grid(True, which="both", alpha=0.25)
-        ax.legend(title=r"$x$", fontsize=9, title_fontsize=9, ncol=2)
+        ax1.set_xscale("log")
+        ax1.set_xlabel(r'$l = \frac{r_2}{r_1}$')
+        ax1.set_ylabel(r"Cost J")
+        ax1.set_title(r"Cost vs. $l=\frac{r_2}{r_1}$ For Various x")
+        ax1.grid(True, which="both", alpha=0.25)
+        ax1.legend(title=r"$x$", fontsize=9, title_fontsize=9, ncol=2)
+
+        for k, l_curr in enumerate(l_range):
+            Jvec = J(l_curr, x)
+            color = cmap(k / (len(l_range) - 1))
+            ax2.plot(x, Jvec, lw=2, color=color, label=rf"$l = {l_curr:.2f}$")
+
+        J_set = J(1, x)
+        ax2.plot(x, J_set, lw=2, color='r', linestyle='--', label=r"$l = 1$", alpha=0.5)
+        ax2.vlines(np.sqrt(2), ymin=J_set.min(), ymax=1.1, color='k', linestyle='--', 
+                   lw=1.5, label=r'$x = \sqrt{2}$')
+        
+        ax2.set_xlabel(r'$x = V_\infty / \sqrt{\frac{\mu}{r}}$')
+        ax2.set_ylabel(r"Cost J")
+        ax2.set_title(r"Cost vs. $x = V_\infty / \sqrt{\frac{\mu}{r}}$ For Various l")
+        ax2.grid(True, which="both", alpha=0.25)
+        ax2.legend(title=r"$l$", fontsize=9, title_fontsize=9, ncol=2)
+
+
         plt.tight_layout()
         plt.show()
 
@@ -374,7 +393,8 @@ def prob7():
     #plot_J_circ(x)
 
     x_range = np.linspace(0, max_x, 21)
-    plot_J_curves(l, x_range)
+    l_range = np.logspace(-2, np.log10(max_L), 20)
+    plot_J_curves(l, x_range, x, l_range)
 
     plot_argmin(l,x)
 
